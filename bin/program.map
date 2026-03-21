@@ -1,0 +1,134 @@
+
+There are no discarded input sections
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+ram              0x00010000         0x00040000
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD bin/root.o
+LOAD bin/os.o
+LOAD bin/process.o
+LOAD bin/stdio.o
+LOAD bin/string.o
+LOAD bin/main.o
+                0x00010000                        . = ORIGIN (ram)
+
+.text           0x00010000      0xb44
+ *(.text*)
+ .text          0x00010000       0x84 bin/root.o
+                0x00010030                _start
+                0x0001005c                PUT32
+                0x00010064                GET32
+                0x0001006c                enable_irq
+ .text          0x00010084      0x844 bin/os.o
+                0x00010084                uart_putc
+                0x000100b8                uart_getc
+                0x000100e8                os_write
+                0x00010138                uart_puts
+                0x00010188                os_read
+                0x00010248                uart_gets_input
+                0x0001024c                uart_putnum
+                0x00010360                uart_itoa
+                0x00010444                uart_ftoa
+                0x00010680                uart_atoi
+                0x000106e4                uart_atof
+                0x00010798                timer_init
+                0x00010834                timer_irq_handler
+                0x000108a0                rand
+ .text          0x000108c8       0x74 bin/process.o
+                0x000108c8                process_sleep
+                0x000108d4                process_init
+ .text          0x0001093c      0x128 bin/stdio.o
+                0x0001093c                READ
+                0x000109a4                PRINT
+ .text          0x00010a64       0x60 bin/string.o
+                0x00010a64                my_strncpy
+ .text          0x00010ac4       0x50 bin/main.o
+                0x00010ac4                uart_putc2
+                0x00010ae0                uart_puts2
+ .text.startup  0x00010b14       0x14 bin/main.o
+                0x00010b14                main
+ *(.rodata*)
+ .rodata.str1.4
+                0x00010b28       0x15 bin/os.o
+                                  0x6 (size before relaxing)
+ .rodata.str1.4
+                0x00010b3d        0xd bin/main.o
+ *fill*         0x00010b3d        0x3 
+ .rodata        0x00010b40        0x4 bin/main.o
+                0x00010b40                UART0
+
+.glue_7         0x00010b44        0x0
+ .glue_7        0x00010b44        0x0 linker stubs
+
+.glue_7t        0x00010b44        0x0
+ .glue_7t       0x00010b44        0x0 linker stubs
+
+.vfp11_veneer   0x00010b44        0x0
+ .vfp11_veneer  0x00010b44        0x0 linker stubs
+
+.v4_bx          0x00010b44        0x0
+ .v4_bx         0x00010b44        0x0 linker stubs
+
+.iplt           0x00010b44        0x0
+ .iplt          0x00010b44        0x0 bin/root.o
+
+.rel.dyn        0x00010b44        0x0
+ .rel.iplt      0x00010b44        0x0 bin/root.o
+
+.data           0x00010b44        0x4
+                0x00010b44                        __data_start__ = .
+ *(.data*)
+ .data          0x00010b44        0x0 bin/root.o
+ .data          0x00010b44        0x4 bin/os.o
+ .data          0x00010b48        0x0 bin/process.o
+ .data          0x00010b48        0x0 bin/stdio.o
+ .data          0x00010b48        0x0 bin/string.o
+ .data          0x00010b48        0x0 bin/main.o
+                0x00010b48                        __data_end__ = .
+
+.igot.plt       0x00010b48        0x0
+ .igot.plt      0x00010b48        0x0 bin/root.o
+
+.bss            0x00010b50     0x2000
+                0x00010b50                        __bss_start__ = .
+ *(.bss*)
+ .bss           0x00010b50     0x2000 bin/root.o
+ .bss           0x00012b50        0x0 bin/os.o
+ .bss           0x00012b50        0x0 bin/process.o
+ .bss           0x00012b50        0x0 bin/stdio.o
+ .bss           0x00012b50        0x0 bin/string.o
+ .bss           0x00012b50        0x0 bin/main.o
+ *(COMMON)
+                0x00012b50                        __bss_end__ = .
+                0x00012b50                        _stack_bottom = __bss_end__
+                0x00050000                        _stack_top = (ORIGIN (ram) + LENGTH (ram))
+OUTPUT(bin/program.elf elf32-littlearm)
+LOAD linker stubs
+
+.ARM.attributes
+                0x00000000       0x33
+ .ARM.attributes
+                0x00000000       0x23 bin/root.o
+ .ARM.attributes
+                0x00000023       0x37 bin/os.o
+ .ARM.attributes
+                0x0000005a       0x37 bin/process.o
+ .ARM.attributes
+                0x00000091       0x37 bin/stdio.o
+ .ARM.attributes
+                0x000000c8       0x37 bin/string.o
+ .ARM.attributes
+                0x000000ff       0x37 bin/main.o
+
+.comment        0x00000000       0x26
+ .comment       0x00000000       0x26 bin/os.o
+                                 0x27 (size before relaxing)
+ .comment       0x00000026       0x27 bin/process.o
+ .comment       0x00000026       0x27 bin/stdio.o
+ .comment       0x00000026       0x27 bin/string.o
+ .comment       0x00000026       0x27 bin/main.o
