@@ -5,33 +5,41 @@
 // ============================================================================
 // BeagleBone Black UART0
 // ============================================================================
+#if PLATFORM_TARGET == 1
+    #define UART_DR      0x00  // Data Register
+    #define UART_FR      0x18  // Flag Register
+    #define UART_FR_TXFF 0x20  // Transmit FIFO Full
+    #define UART_FR_RXFE 0x10  // Receive FIFO Empty
 
-#define UART_THR       (UART0_BASE + 0x00)  // Transmit Holding Register
-#define UART_LSR       (UART0_BASE + 0x14)  // Line Status Register
-#define UART_LSR_THRE  0x20                 // Transmit Holding Register Empty
-#define UART_LSR_RXFE  0x10                 // Receive FIFO Empty
+    volatile unsigned int * const UART0 = (unsigned int *)UART0_BASE;
+#else
+    #define UART_THR       (UART0_BASE + 0x00)  // Transmit Holding Register
+    #define UART_LSR       (UART0_BASE + 0x14)  // Line Status Register
+    #define UART_LSR_THRE  0x20                 // Transmit Holding Register Empty
+    #define UART_LSR_RXFE  0x10                 // Receive FIFO Empty
+#endif
 
-// ============================================================================
-// BeagleBone Black DMTIMER2
-// ============================================================================
+    // ============================================================================
+    // BeagleBone Black DMTIMER2
+    // ============================================================================
 
-#define TCLR                (DMTIMER2_BASE + 0x38)  // Timer Control Register
-#define TCRR                (DMTIMER2_BASE + 0x3C)  // Timer Counter Register
-#define TISR                (DMTIMER2_BASE + 0x28)  // Timer Interrupt Status Register
-#define TIER                (DMTIMER2_BASE + 0x2C)  // Timer Interrupt Enable Register
-#define TLDR                (DMTIMER2_BASE + 0x40)  // Timer Load Register
+    #define TCLR                (DMTIMER2_BASE + 0x38)  // Timer Control Register
+    #define TCRR                (DMTIMER2_BASE + 0x3C)  // Timer Counter Register
+    #define TISR                (DMTIMER2_BASE + 0x28)  // Timer Interrupt Status Register
+    #define TIER                (DMTIMER2_BASE + 0x2C)  // Timer Interrupt Enable Register
+    #define TLDR                (DMTIMER2_BASE + 0x40)  // Timer Load Register
 
-// ============================================================================
-// BeagleBone Black Interrupt Controller (INTCPS)
-// ============================================================================
+    // ============================================================================
+    // BeagleBone Black Interrupt Controller (INTCPS)
+    // ============================================================================
 
-#define INTC_MIR_CLEAR2     (INTCPS_BASE + 0xC8)    // Interrupt Mask Clear Register 2
-#define INTC_CONTROL        (INTCPS_BASE + 0x48)    // Interrupt Controller Control
-#define INTC_ILR68          (INTCPS_BASE + 0x110)   // Interrupt Line Register 68
+    #define INTC_MIR_CLEAR2     (INTCPS_BASE + 0xC8)    // Interrupt Mask Clear Register 2
+    #define INTC_CONTROL        (INTCPS_BASE + 0x48)    // Interrupt Controller Control
+    #define INTC_ILR68          (INTCPS_BASE + 0x110)   // Interrupt Line Register 68
 
-// ============================================================================
-// Clock Manager
-// ============================================================================
+    // ============================================================================
+    // Clock Manager
+    // ============================================================================
 
 #define CM_PER_TIMER2_CLKCTRL   (CM_PER_BASE + 0x80)  // Timer2 Clock Control
 
@@ -46,14 +54,24 @@ extern void jump_to_process(uint32_t pc, uint32_t sp);
 
 // Send one character
 void uart_putc(char c) {
-    while ((GET32(UART_LSR) & UART_LSR_THRE) == 0);
-    PUT32(UART_THR, c);
+    #if PLATFORM_TARGET == 1
+        while (UART0[UART_FR / 4] & UART_FR_TXFF);
+        UART0[UART_DR / 4] = c;
+    #else 
+        while ((GET32(UART_LSR) & UART_LSR_THRE) == 0);
+        PUT32(UART_THR, c);
+    #endif
 }
 
 // Receive one character
 char uart_getc(void) {
-    while ((GET32(UART_LSR) & UART_LSR_RXFE) != 0);
-    return (char)(GET32(UART_THR) & 0xFF);
+    #if PLATFORM_TARGET == 1
+        while (UART0[UART_FR / 4] & UART_FR_RXFE);
+        return (char)(UART0[UART_DR / 4] & 0xFF);
+    #else 
+        while ((GET32(UART_LSR) & UART_LSR_RXFE) != 0);
+        return (char)(GET32(UART_THR) & 0xFF);
+    #endif
 }
 
 // ============================================================================
@@ -283,35 +301,48 @@ float uart_atof(const char *s) {
 // ============================================================================
 
 void timer_init(void) {
-    // Enable timer2 clock
-    PUT32(CM_PER_TIMER2_CLKCTRL, 0x2);
+    #if PLATFORM_TARGET == 1
+        PUT32(PLATFORM_TIMER_BASE + 0x08, 0);         // detener timer
+        PUT32(PLATFORM_TIMER_BASE + 0x00, 1000000);   // load value
+        PUT32(PLATFORM_TIMER_BASE + 0x0C, 1);         // limpiar interrupcion
+        PUT32(PLATFORM_TIMER_BASE + 0x08, 0xC2);      // enable + periodic + irq
+    #else
+        // Enable timer2 clock
+        PUT32(CM_PER_TIMER2_CLKCTRL, 0x2);
 
-    // Unmask interrupt 68 and give it priority
-    PUT32(INTC_MIR_CLEAR2, (1 << 4));
-    PUT32(INTC_ILR68, 0x0);
+        // Unmask interrupt 68 and give it priority
+        PUT32(INTC_MIR_CLEAR2, (1 << 4));
+        PUT32(INTC_ILR68, 0x0);
 
-    // Stop timer and clear pending flags
-    PUT32(TCLR, 0x0);
-    PUT32(TISR, 0x7);
+        // Stop timer and clear pending flags
+        PUT32(TCLR, 0x0);
+        PUT32(TISR, 0x7);
 
-    // Load start value for ~2 seconds at 24 MHz
-    PUT32(TLDR, 0xFE91CA00);
-    PUT32(TCRR, 0xFE91CA00);
+        // Load start value for ~2 seconds at 24 MHz
+        PUT32(TLDR, 0xFE91CA00);
+        PUT32(TCRR, 0xFE91CA00);
 
-    // Enable overflow interrupt and auto-reload
-    PUT32(TIER, 0x2);
-    PUT32(TCLR, 0x3);
+        // Enable overflow interrupt and auto-reload
+        PUT32(TIER, 0x2);
+        PUT32(TCLR, 0x3);
+    #endif
 }
 
 void timer_irq_handler(void) {
-    // Clear timer overflow flag
-    PUT32(TISR, 0x2);
+    #if PLATFORM_TARGET == 1
+        PUT32(PLATFORM_TIMER_BASE + 0x0C, 1);   // limpiar interrupcion SP804
+        // acknowledger VIC si tienes el intc configurado
+        os_write("Tick\n");
+    #else
+        // Clear timer overflow flag
+        PUT32(TISR, 0x2);
 
-    // Acknowledge interrupt controller
-    PUT32(INTC_CONTROL, 0x1);
+        // Acknowledge interrupt controller
+        PUT32(INTC_CONTROL, 0x1);
 
-    // Debug output
-    os_write("Tick\n");
+        // Debug output
+        os_write("Tick\n");
+    #endif
 }
 
 // ============================================================================
