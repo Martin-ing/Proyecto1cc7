@@ -4,7 +4,11 @@ There are no discarded input sections
 Memory Configuration
 
 Name             Origin             Length             Attributes
-ram              0x00010000         0x00040000
+os_ram           0x82000000         0x00040000
+p1_ram           0x82100000         0x00010000
+p1_stack         0x82110000         0x00001000
+p2_ram           0x82200000         0x00010000
+p2_stack         0x82210000         0x00001000
 *default*        0x00000000         0xffffffff
 
 Linker script and memory map
@@ -14,99 +18,118 @@ LOAD bin/os.o
 LOAD bin/process.o
 LOAD bin/stdio.o
 LOAD bin/string.o
-LOAD bin/main.o
-                0x00010000                        . = ORIGIN (ram)
+LOAD bin/p1_main.o
+                0x82000000                        . = ORIGIN (os_ram)
 
-.text           0x00010000      0xb44
+.text           0x82000000      0xaf1
  *(.text*)
- .text          0x00010000       0x84 bin/root.o
-                0x00010030                _start
-                0x0001005c                PUT32
-                0x00010064                GET32
-                0x0001006c                enable_irq
- .text          0x00010084      0x844 bin/os.o
-                0x00010084                uart_putc
-                0x000100b8                uart_getc
-                0x000100e8                os_write
-                0x00010138                uart_puts
-                0x00010188                os_read
-                0x00010248                uart_gets_input
-                0x0001024c                uart_putnum
-                0x00010360                uart_itoa
-                0x00010444                uart_ftoa
-                0x00010680                uart_atoi
-                0x000106e4                uart_atof
-                0x00010798                timer_init
-                0x00010834                timer_irq_handler
-                0x000108a0                rand
- .text          0x000108c8       0x74 bin/process.o
-                0x000108c8                process_sleep
-                0x000108d4                process_init
- .text          0x0001093c      0x128 bin/stdio.o
-                0x0001093c                READ
-                0x000109a4                PRINT
- .text          0x00010a64       0x60 bin/string.o
-                0x00010a64                my_strncpy
- .text          0x00010ac4       0x50 bin/main.o
-                0x00010ac4                uart_putc2
-                0x00010ae0                uart_puts2
- .text.startup  0x00010b14       0x14 bin/main.o
-                0x00010b14                main
+ .text          0x82000000       0x8c bin/root.o
+                0x82000030                _start
+                0x82000034                jump_to_process
+                0x82000064                PUT32
+                0x8200006c                GET32
+                0x82000074                enable_irq
+ .text          0x8200008c      0x848 bin/os.o
+                0x8200008c                uart_putc
+                0x820000c0                uart_getc
+                0x820000f0                os_write
+                0x82000140                uart_puts
+                0x82000190                os_read
+                0x82000250                uart_gets_input
+                0x82000254                uart_putnum
+                0x82000368                uart_itoa
+                0x8200044c                uart_ftoa
+                0x82000688                uart_atoi
+                0x820006ec                uart_atof
+                0x820007a0                timer_init
+                0x82000840                timer_irq_handler
+                0x820008ac                rand
+ .text.startup  0x820008d4       0x40 bin/os.o
+                0x820008d4                main
+ .text          0x82000914       0x3c bin/process.o
+                0x82000914                process_init
+ .text          0x82000950      0x128 bin/stdio.o
+                0x82000950                READ
+                0x820009b8                PRINT
+ .text          0x82000a78       0x60 bin/string.o
+                0x82000a78                my_strncpy
+ .text          0x82000ad8        0x0 bin/p1_main.o
  *(.rodata*)
  .rodata.str1.4
-                0x00010b28       0x15 bin/os.o
+                0x82000ad8       0x19 bin/os.o
                                   0x6 (size before relaxing)
  .rodata.str1.4
-                0x00010b3d        0xd bin/main.o
- *fill*         0x00010b3d        0x3 
- .rodata        0x00010b40        0x4 bin/main.o
-                0x00010b40                UART0
+                0x82000af1       0x11 bin/p1_main.o
 
-.glue_7         0x00010b44        0x0
- .glue_7        0x00010b44        0x0 linker stubs
+.glue_7         0x82000af4        0x0
+ .glue_7        0x82000af4        0x0 linker stubs
 
-.glue_7t        0x00010b44        0x0
- .glue_7t       0x00010b44        0x0 linker stubs
+.glue_7t        0x82000af4        0x0
+ .glue_7t       0x82000af4        0x0 linker stubs
 
-.vfp11_veneer   0x00010b44        0x0
- .vfp11_veneer  0x00010b44        0x0 linker stubs
+.vfp11_veneer   0x82000af4        0x0
+ .vfp11_veneer  0x82000af4        0x0 linker stubs
 
-.v4_bx          0x00010b44        0x0
- .v4_bx         0x00010b44        0x0 linker stubs
+.v4_bx          0x82000af4        0x0
+ .v4_bx         0x82000af4        0x0 linker stubs
 
-.iplt           0x00010b44        0x0
- .iplt          0x00010b44        0x0 bin/root.o
+.iplt           0x82000af4        0x0
+ .iplt          0x82000af4        0x0 bin/root.o
 
-.rel.dyn        0x00010b44        0x0
- .rel.iplt      0x00010b44        0x0 bin/root.o
-
-.data           0x00010b44        0x4
-                0x00010b44                        __data_start__ = .
+.data           0x82000af4        0x4 load address 0x82000af1
+                0x82000af4                        __data_start__ = .
  *(.data*)
- .data          0x00010b44        0x0 bin/root.o
- .data          0x00010b44        0x4 bin/os.o
- .data          0x00010b48        0x0 bin/process.o
- .data          0x00010b48        0x0 bin/stdio.o
- .data          0x00010b48        0x0 bin/string.o
- .data          0x00010b48        0x0 bin/main.o
-                0x00010b48                        __data_end__ = .
+ .data          0x82000af4        0x0 bin/root.o
+ .data          0x82000af4        0x4 bin/os.o
+ .data          0x82000af8        0x0 bin/process.o
+ .data          0x82000af8        0x0 bin/stdio.o
+ .data          0x82000af8        0x0 bin/string.o
+ .data          0x82000af8        0x0 bin/p1_main.o
+                0x82000af8                        __data_end__ = .
 
-.igot.plt       0x00010b48        0x0
- .igot.plt      0x00010b48        0x0 bin/root.o
+.igot.plt       0x82000af8        0x0
+ .igot.plt      0x82000af8        0x0 bin/root.o
 
-.bss            0x00010b50     0x2000
-                0x00010b50                        __bss_start__ = .
+.bss            0x82000b00     0x204c
+                0x82000b00                        __bss_start__ = .
  *(.bss*)
- .bss           0x00010b50     0x2000 bin/root.o
- .bss           0x00012b50        0x0 bin/os.o
- .bss           0x00012b50        0x0 bin/process.o
- .bss           0x00012b50        0x0 bin/stdio.o
- .bss           0x00012b50        0x0 bin/string.o
- .bss           0x00012b50        0x0 bin/main.o
+ .bss           0x82000b00     0x2000 bin/root.o
+ .bss           0x82002b00       0x4c bin/os.o
+ .bss           0x82002b4c        0x0 bin/process.o
+ .bss           0x82002b4c        0x0 bin/stdio.o
+ .bss           0x82002b4c        0x0 bin/string.o
+ .bss           0x82002b4c        0x0 bin/p1_main.o
  *(COMMON)
-                0x00012b50                        __bss_end__ = .
-                0x00012b50                        _stack_bottom = __bss_end__
-                0x00050000                        _stack_top = (ORIGIN (ram) + LENGTH (ram))
+                0x82002b4c                        __bss_end__ = .
+                0x82002b4c                        _stack_bottom = __bss_end__
+                0x82040000                        _stack_top = (ORIGIN (os_ram) + LENGTH (os_ram))
+                0x82100000                        . = ORIGIN (p1_ram)
+
+.p1_text        0x82100000       0x2c
+                0x82100000                        __p1_start__ = .
+ *(.p1_text)
+ .p1_text       0x82100000       0x2c bin/p1_main.o
+                0x82100000                p1_start
+ *(.p1_rodata)
+ *(.p1_data)
+ *(.p1_bss)
+                0x8210002c                        __p1_end__ = .
+                0x82110000                        __p1_stack_base__ = ORIGIN (p1_stack)
+                0x82111000                        __p1_stack_top__ = (ORIGIN (p1_stack) + LENGTH (p1_stack))
+
+.rel.dyn        0x8210002c        0x0
+ .rel.iplt      0x8210002c        0x0 bin/root.o
+                0x82200000                        . = ORIGIN (p2_ram)
+
+.p2_text        0x82200000        0x0
+                0x82200000                        __p2_start__ = .
+ *(.p2_text)
+ *(.p2_rodata)
+ *(.p2_data)
+ *(.p2_bss)
+                0x82200000                        __p2_end__ = .
+                0x82210000                        __p2_stack_base__ = ORIGIN (p2_stack)
+                0x82211000                        __p2_stack_top__ = (ORIGIN (p2_stack) + LENGTH (p2_stack))
 OUTPUT(bin/program.elf elf32-littlearm)
 LOAD linker stubs
 
@@ -123,7 +146,7 @@ LOAD linker stubs
  .ARM.attributes
                 0x000000c8       0x37 bin/string.o
  .ARM.attributes
-                0x000000ff       0x37 bin/main.o
+                0x000000ff       0x37 bin/p1_main.o
 
 .comment        0x00000000       0x26
  .comment       0x00000000       0x26 bin/os.o
@@ -131,4 +154,4 @@ LOAD linker stubs
  .comment       0x00000026       0x27 bin/process.o
  .comment       0x00000026       0x27 bin/stdio.o
  .comment       0x00000026       0x27 bin/string.o
- .comment       0x00000026       0x27 bin/main.o
+ .comment       0x00000026       0x27 bin/p1_main.o

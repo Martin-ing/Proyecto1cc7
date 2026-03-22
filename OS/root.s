@@ -2,6 +2,7 @@
 .syntax unified
 .code 32
 .globl _start
+.global jump_to_process
 
 // Exception Vector Table
 // Must be aligned to 32 bytes (0x20)
@@ -30,6 +31,12 @@ reset_handler:
     // If main returns, loop forever
 _start:
     bl main
+
+jump_to_process:
+    @ r0 = pc
+    @ r1 = sp
+    mov sp, r1
+    bx  r0
 
 hang:
     b hang

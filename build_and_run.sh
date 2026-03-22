@@ -120,9 +120,9 @@ echo "Compiling Lib/string.c..."
 $CC -c "${COMMON_FLAGS[@]}" \
     -o bin/string.o Lib/string.c
 
-echo "Compiling User/main.c..."
+echo "Compiling User/P1/main.c..."
 $CC -c "${COMMON_FLAGS[@]}" \
-    -o bin/main.o User/main.c
+    -o bin/p1_main.o User/P1/main.c
 
 
 # ============================================================
@@ -142,7 +142,7 @@ $CC "${COMMON_FLAGS[@]}" -T "$LINKER_SCRIPT" \
     bin/process.o \
     bin/stdio.o \
     bin/string.o \
-    bin/main.o
+    bin/p1_main.o
 
 # ============================================================
 # BIN

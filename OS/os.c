@@ -1,5 +1,6 @@
 #include "os.h"
 #include "plataform.h"
+#include "process.h"
 
 // ============================================================================
 // BeagleBone Black UART0
@@ -33,6 +34,11 @@
 // ============================================================================
 
 #define CM_PER_TIMER2_CLKCTRL   (CM_PER_BASE + 0x80)  // Timer2 Clock Control
+
+#define PROCESS_STACK_SIZE  0x1000
+
+
+extern void jump_to_process(uint32_t pc, uint32_t sp);
 
 // ============================================================================
 // UART low-level
@@ -317,4 +323,22 @@ static unsigned int seed = 12345;
 unsigned int rand(void) {
     seed = (seed * 1103515245 + 12345) & 0x7fffffff;
     return seed;
+}
+
+static Process p1;
+
+int main(void) {
+    process_init(&p1,
+                 1,
+                 P1_BASE,
+                 P1_STACK + PROCESS_STACK_SIZE);
+
+    p1.state = PROCESS_RUNNING;
+
+    jump_to_process(p1.pc, p1.sp);
+
+    while (1) {
+    }
+
+    return 0;
 }
