@@ -86,6 +86,3 @@ enable_irq:
 // Stack space allocation
 .section .bss
 .align 4
-_stack_bottom:
-    .skip 0x2000  @ 8KB stack space
-_stack_top:

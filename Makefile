@@ -8,14 +8,14 @@ OS_DIR      = OS
 LIB_DIR     = Lib
 BIN_DIR     = bin
 
-name   ?= hello
+name   = program
 TARGET ?= beagle
 
 ELF = $(BIN_DIR)/$(name).elf
 BIN = $(BIN_DIR)/$(name).bin
 
 ASM_SRC = OS/root.s
-C_SRC   = $(wildcard $(PROGRAM_DIR)/*.c) \
+C_SRC   = $(wildcard $(PROGRAM_DIR)/**/*.c) \
            $(wildcard $(OS_DIR)/*.c) \
            $(wildcard $(LIB_DIR)/*.c)
 
