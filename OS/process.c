@@ -11,7 +11,7 @@ void process_init(Process *p,
     p->pc = pc;
     p->sp = sp;
     p->lr = 0;
-    p->spsr = 0;
+    p->spsr = 0x00000013;
     p->state = PROCESS_READY;
 
     for (i = 0; i < 13; i++) {

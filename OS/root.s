@@ -1,45 +1,264 @@
 .section .text
 .syntax unified
 .code 32
-.globl _start
-.global jump_to_process
 
+.global _start
+.global jump_to_process
+.global PUT32
+.global GET32
+.global enable_irq
+
+.extern main
+.extern timer_irq_handler
+.extern CurrProcess
+
+.extern _stack_top
+.extern _irq_stack_top
+.extern schedule
+
+// ============================================================
+// Offsets de struct Process
+// Deben coincidir EXACTAMENTE con process.h
+// ============================================================
+
+.equ PROC_PID,    0
+.equ PROC_R0,     4
+.equ PROC_R1,     8
+.equ PROC_R2,     12
+.equ PROC_R3,     16
+.equ PROC_R4,     20
+.equ PROC_R5,     24
+.equ PROC_R6,     28
+.equ PROC_R7,     32
+.equ PROC_R8,     36
+.equ PROC_R9,     40
+.equ PROC_R10,    44
+.equ PROC_R11,    48
+.equ PROC_R12,    52
+.equ PROC_SP,     56
+.equ PROC_LR,     60
+.equ PROC_PC,     64
+.equ PROC_SPSR,   68
+.equ PROC_STATE,  72
+
+// ============================================================
 // Exception Vector Table
-// Must be aligned to 32 bytes (0x20)
+// ============================================================
+
 .align 5
 vector_table:
-    b reset_handler      @ 0x00: Reset
-    b undefined_handler  @ 0x04: Undefined Instruction
-    b swi_handler        @ 0x08: Software Interrupt (SWI)
-    b prefetch_handler   @ 0x0C: Prefetch Abort
-    b data_handler       @ 0x10: Data Abort
-    b .                  @ 0x14: Reserved
-    b irq_handler        @ 0x18: IRQ (Interrupt Request)
-    b fiq_handler        @ 0x1C: FIQ (Fast Interrupt Request)
+    b _start              @ 0x00 Reset
+    b undefined_handler   @ 0x04 Undefined
+    b swi_handler         @ 0x08 SWI
+    b prefetch_handler    @ 0x0C Prefetch abort
+    b data_handler        @ 0x10 Data abort
+    b .                   @ 0x14 Reserved
+    b irq_handler         @ 0x18 IRQ
+    b fiq_handler         @ 0x1C FIQ
 
-reset_handler:
-    // Set up stack pointer
-    ldr sp, =_stack_top
-    
-    // Set up exception vector table base address (VBAR - Vector Base Address Register)
+// ============================================================
+// Reset
+// ============================================================
+
+_start:
+    // Configurar VBAR
     ldr r0, =vector_table
     mcr p15, 0, r0, c12, c0, 0
-    
-    // Call main function
-    bl main
-    
-    // If main returns, loop forever
-_start:
-    bl main
 
-jump_to_process:
-    @ r0 = pc
-    @ r1 = sp
-    mov sp, r1
-    bx  r0
+    // --------------------------------------------------------
+    // Inicializar stack de IRQ
+    // --------------------------------------------------------
+    mrs r0, cpsr
+    bic r1, r0, #0x1F
+    orr r1, r1, #0x12      @ modo IRQ
+    orr r1, r1, #0x80      @ IRQ disable
+    msr cpsr_c, r1
+
+    ldr sp, =_irq_stack_top
+
+    // --------------------------------------------------------
+    // Volver a SVC e inicializar stack del OS
+    // --------------------------------------------------------
+    bic r1, r0, #0x1F
+    orr r1, r1, #0x13      @ modo SVC
+    orr r1, r1, #0x80      @ IRQ disable
+    msr cpsr_c, r1
+
+    ldr sp, =_stack_top
+
+    // Llamar main del OS
+    bl main
 
 hang:
     b hang
+
+// ============================================================
+// Saltar a un proceso
+// r0 = pc
+// r1 = sp
+// ============================================================
+
+jump_to_process:
+    mov sp, r1
+    bx  r0
+
+// ============================================================
+// IRQ handler
+// ============================================================
+
+irq_handler:
+
+    // --------------------------------------------------------
+    // Etapa 1: Salvar registros de trabajo en el stack IRQ
+    // 14 registros × 4 bytes = 56 bytes
+    // Disposición: r0@sp+0, r1@sp+4, ... r12@sp+48, lr@sp+52
+    // --------------------------------------------------------
+    sub  sp, sp, #56
+    stmia sp, {r0-r12, lr}
+
+    // --------------------------------------------------------
+    // Etapa 2: Cargar puntero al proceso actual
+    // --------------------------------------------------------
+    ldr  r4, =CurrProcess
+    ldr  r4, [r4]
+
+    cmp  r4, #0
+    beq  irq_no_current_process     // safety: no debería ocurrir
+
+    // --------------------------------------------------------
+    // Etapa 3: Guardar r0-r12 en el PCB
+    // (los valores reales están en el stack IRQ, no en los regs)
+    // --------------------------------------------------------
+    ldr  r5, [sp, #0]
+    str  r5, [r4, #PROC_R0]
+    ldr  r5, [sp, #4]
+    str  r5, [r4, #PROC_R1]
+    ldr  r5, [sp, #8]
+    str  r5, [r4, #PROC_R2]
+    ldr  r5, [sp, #12]
+    str  r5, [r4, #PROC_R3]
+    ldr  r5, [sp, #16]
+    str  r5, [r4, #PROC_R4]
+    ldr  r5, [sp, #20]
+    str  r5, [r4, #PROC_R5]
+    ldr  r5, [sp, #24]
+    str  r5, [r4, #PROC_R6]
+    ldr  r5, [sp, #28]
+    str  r5, [r4, #PROC_R7]
+    ldr  r5, [sp, #32]
+    str  r5, [r4, #PROC_R8]
+    ldr  r5, [sp, #36]
+    str  r5, [r4, #PROC_R9]
+    ldr  r5, [sp, #40]
+    str  r5, [r4, #PROC_R10]
+    ldr  r5, [sp, #44]
+    str  r5, [r4, #PROC_R11]
+    ldr  r5, [sp, #48]
+    str  r5, [r4, #PROC_R12]
+
+    // --------------------------------------------------------
+    // Etapa 4: Guardar SPSR (= CPSR del proceso interrumpido)
+    // --------------------------------------------------------
+    mrs  r5, spsr
+    str  r5, [r4, #PROC_SPSR]
+
+    // --------------------------------------------------------
+    // Etapa 5: Guardar PC del proceso
+    // En IRQ, lr_irq = PC_interrumpido + 4  →  restamos 4
+    // --------------------------------------------------------
+    ldr  r5, [sp, #52]             @ lr_irq guardado en stack
+    sub  r5, r5, #4
+    str  r5, [r4, #PROC_PC]
+
+    // --------------------------------------------------------
+    // Etapa 6: Guardar SP y LR del proceso (registros SVC)
+    // sp_svc y lr_svc son banked → hay que cambiar a SVC mode
+    // para leerlos; r0-r12 son COMPARTIDOS entre modos
+    // --------------------------------------------------------
+    mrs  r6, cpsr                  @ guardar CPSR (modo IRQ actual)
+
+    bic  r7, r6, #0x1F
+    orr  r7, r7, #0x13             @ modo SVC
+    orr  r7, r7, #0x80             @ IRQ disable (precaución)
+    msr  cpsr_c, r7
+
+    str  sp, [r4, #PROC_SP]        @ sp_svc del proceso
+    str  lr, [r4, #PROC_LR]        @ lr_svc del proceso
+
+    msr  cpsr_c, r6                @ volver a modo IRQ
+
+    // --------------------------------------------------------
+    // Etapa 7: Limpiar interrupción del timer
+    // r4 es callee-saved → sobrevive el bl sin problema
+    // --------------------------------------------------------
+irq_no_current_process:
+    bl   timer_irq_handler
+
+    // --------------------------------------------------------
+    // Etapa 8: Scheduler — encola proceso actual, desencola
+    //          el siguiente y actualiza CurrProcess
+    // --------------------------------------------------------
+    bl   schedule
+
+    // --------------------------------------------------------
+    // Etapa 9: Cargar el NUEVO proceso actual
+    // (schedule() actualizó CurrProcess)
+    // --------------------------------------------------------
+    ldr  r4, =CurrProcess
+    ldr  r4, [r4]
+
+    // --------------------------------------------------------
+    // Etapa 10: Preparar el retorno al nuevo proceso
+    //
+    // El truco del ARM:
+    //   - lr_irq   = dirección a la que saltaremos (PC del proceso)
+    //   - spsr_irq = CPSR que se restaurará al ejecutar movs pc, lr
+    //   - movs pc, lr  hace ambas cosas en un solo ciclo
+    // --------------------------------------------------------
+
+    // Cargar PC del nuevo proceso en lr_irq (banco IRQ)
+    ldr  lr, [r4, #PROC_PC]
+
+    // Restaurar SPSR con el CPSR guardado del nuevo proceso
+    ldr  r5, [r4, #PROC_SPSR]
+    msr  spsr_cxsf, r5
+
+    // Cambiar a SVC para restaurar sp_svc y lr_svc del nuevo proceso
+    // lr_irq queda intacto porque es un registro banked
+    mrs  r6, cpsr
+    bic  r7, r6, #0x1F
+    orr  r7, r7, #0x13
+    orr  r7, r7, #0x80
+    msr  cpsr_c, r7
+
+    ldr  sp, [r4, #PROC_SP]        @ restaurar sp_svc
+    ldr  lr, [r4, #PROC_LR]        @ restaurar lr_svc
+
+    // Volver a IRQ — lr_irq sigue con el PC del nuevo proceso
+    msr  cpsr_c, r6
+
+    // --------------------------------------------------------
+    // Etapa 11: Restaurar r0-r12 del PCB con ldmia
+    //
+    // r4 apunta al PCB; sumamos PROC_R0 (offset 4) para apuntar
+    // directo al arreglo r[0..12]. ldmia carga 13 registros
+    // consecutivos: r0←r[0], r1←r[1], ..., r4←r[4], ..., r12←r[12]
+    // r4 queda sobreescrito con su valor correcto del PCB. ✓
+    // --------------------------------------------------------
+    add  r4, r4, #PROC_R0
+    ldmia r4, {r0-r12}
+
+    // --------------------------------------------------------
+    // Etapa 12: Saltar al nuevo proceso
+    // movs pc, lr  (con S-bit en modo privilegiado):
+    //   → PC = lr_irq  (= nuevo proceso PC)
+    //   → CPSR = SPSR_irq (= CPSR guardado del nuevo proceso)
+    // --------------------------------------------------------
+    movs pc, lr
+
+// ============================================================
+// Otros handlers
+// ============================================================
 
 undefined_handler:
     b hang
@@ -53,36 +272,34 @@ prefetch_handler:
 data_handler:
     b hang
 
-irq_handler:
-//se guardan los registros importantes en el stack para sacarlos luego y se manda a llamar a la funcion en c
-    push {r0-r12, lr}
-    bl timer_irq_handler
-    pop  {r0-r12, lr}
-    subs pc, lr, #4
-
 fiq_handler:
     b hang
 
-// Low-level memory access functions
-.globl PUT32
+// ============================================================
+// Acceso de memoria
+// ============================================================
+
 PUT32:
     str r1, [r0]
     bx lr
 
-.globl GET32
 GET32:
     ldr r0, [r0]
     bx lr
 
-.globl enable_irq
 enable_irq:
-//se modifica el registro de estado del programa actual
-//se hace que el CPU acepte interrupciones tipo IRQ
     mrs r0, cpsr
     bic r0, r0, #0x80
     msr cpsr_c, r0
     bx lr
 
-// Stack space allocation
+// ============================================================
+// Stacks
+// ============================================================
+
 .section .bss
-.align 4
+.align 8
+
+irq_stack:
+    .space 1024
+_irq_stack_top:
