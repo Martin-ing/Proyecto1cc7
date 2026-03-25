@@ -1,26 +1,6 @@
 #ifndef OS_H
 #define OS_H
 
-// Low-level OS interface functions
-void os_write(const char *s);
-void os_read(char *buffer, int max_length);
-
-// UART helper functions
-void uart_putc(char c);
-char uart_getc(void);
-void uart_putnum(unsigned int num);
-
-void uart_gets_input(char *buffer, int max_length);
-float uart_atof(const char *s);
-int uart_atoi(const char *s);
-void uart_ftoa(float num, char *buffer);
-void uart_itoa(int num, char *buffer);
-void uart_puts(const char *s);
-
-// Timer functions
-void timer_init(void);
-void timer_irq_handler(void);
-
 // Interrupt control
 void enable_irq(void);
 

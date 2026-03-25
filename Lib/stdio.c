@@ -1,5 +1,6 @@
 #include "stdio.h"
-#include "os.h"
+#include "uart.h"
+#include "alphanumeric.h"
 #include "string.h"
 #include <stdarg.h>
 

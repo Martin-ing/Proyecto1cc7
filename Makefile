@@ -36,7 +36,9 @@ PLATFORM_FLAGS = -DPLATFORM_TARGET=$(PLATFORM_TARGET) \
                  -DPLATFORM_OS_BASE=$(OS_BASE) \
                  -DPLATFORM_OS_STACK=$(OS_STACK) \
 				 -DP1_BASE=$(P1_BASE) \
-				 -DP1_STACK=$(P1_STACK) 
+				 -DP1_STACK=$(P1_STACK) \
+				 -DP2_BASE=$(P2_BASE) \
+				 -DP2_STACK=$(P2_STACK) 
 
 BASE_CFLAGS = -mcpu=cortex-a8 \
               -mfpu=neon \
