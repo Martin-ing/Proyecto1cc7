@@ -16,11 +16,6 @@
 .extern _irq_stack_top
 .extern schedule
 
-// ============================================================
-// Offsets de struct Process
-// Deben coincidir EXACTAMENTE con process.h
-// ============================================================
-
 .equ PROC_PID,    0
 .equ PROC_R0,     4
 .equ PROC_R1,     8

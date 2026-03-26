@@ -1,5 +1,6 @@
 #include "uart.h"
 #include "plataform.h"
+#include "os.h"
 #include "timer.h"
 
 // ============================================================================

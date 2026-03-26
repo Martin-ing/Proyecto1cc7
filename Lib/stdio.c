@@ -31,12 +31,21 @@ void PRINT(const char *s, ...){
             if (*s == 'f') {
                 double v = va_arg(args, double);
                 uart_ftoa((float)v, buffer);
+                uart_puts(buffer);
             }
             if(*s == 'd'){
                 int v = va_arg(args, int);
-                uart_itoa(v,&buffer);
+                uart_itoa(v, buffer);
+                uart_puts(buffer);
             }
-            uart_puts(buffer);
+            if(*s == 's'){
+                char *v = va_arg(args, char*);
+                uart_puts(v);
+            }
+            if(*s == 'c'){
+                char v = (char)va_arg(args, int);
+                uart_putc(v);
+            }
             s++;
         }
         else{

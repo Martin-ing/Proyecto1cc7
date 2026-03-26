@@ -3,15 +3,13 @@
 
 __attribute__((section(".p2_text")))
 void p2_start(void) {
-    int i = 97;
+    char c = 'a';
 
     while (1) {
-        char buffer[12];
-        uart_itoa(i, buffer);
-        PRINT("----From P2: %s\n", buffer);
-        i++;
-        if(i == 123){
-            i=97;
+        PRINT("----From P2: %c\n", c);
+        c++;
+        if(c == ('z'+1)){
+            c = 'a';
         }
     }
 }
