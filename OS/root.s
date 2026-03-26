@@ -1,3 +1,4 @@
+@@ -1,300 +1,281 @@
 .section .text
 .syntax unified
 .code 32
@@ -7,13 +8,14 @@
 .global PUT32
 .global GET32
 .global enable_irq
-.global _irq_stack_top
+.global disable_irq
 
 .extern main
 .extern timer_irq_handler
 .extern CurrProcess
 
 .extern _stack_top
+.extern _irq_stack_top
 .extern schedule
 
 .equ PROC_PID,    0
@@ -36,10 +38,6 @@
 .equ PROC_SPSR,   68
 .equ PROC_STATE,  72
 
-// ============================================================
-// Exception Vector Table
-// ============================================================
-
 .align 5
 vector_table:
     b _start              @ 0x00 Reset
@@ -51,18 +49,11 @@ vector_table:
     b irq_handler         @ 0x18 IRQ
     b fiq_handler         @ 0x1C FIQ
 
-// ============================================================
-// Reset
-// ============================================================
-
 _start:
     // Configurar VBAR
     ldr r0, =vector_table
     mcr p15, 0, r0, c12, c0, 0
 
-    // --------------------------------------------------------
-    // Inicializar stack de IRQ
-    // --------------------------------------------------------
     mrs r0, cpsr
     bic r1, r0, #0x1F
     orr r1, r1, #0x12      @ modo IRQ
@@ -71,12 +62,6 @@ _start:
 
     ldr sp, =_irq_stack_top
 
-    mov r2, #0x00000013    @ SVC mode, IRQs habilitadas
-    msr spsr_cxsf, r2      @ ← agregar esta línea
-
-    // --------------------------------------------------------
-    // Volver a SVC e inicializar stack del OS
-    // --------------------------------------------------------
     bic r1, r0, #0x1F
     orr r1, r1, #0x13      @ modo SVC
     orr r1, r1, #0x80      @ IRQ disable
@@ -90,20 +75,10 @@ _start:
 hang:
     b hang
 
-// ============================================================
-// Saltar a un proceso
-// r0 = pc
-// r1 = sp
-// ============================================================
-
 jump_to_process:
     mov sp, r1
-    mov lr, #0
-    bx  r0
 
-// ============================================================
-// IRQ handler
-// ============================================================
+    bx  r0
 
 irq_handler:
 
@@ -128,8 +103,32 @@ irq_handler:
     // Etapa 3: Guardar r0-r12 en el PCB
     // (los valores reales están en el stack IRQ, no en los regs)
     // --------------------------------------------------------
-    sub  sp, sp, #56
-    stmia sp, {r0-r12, lr} 
+    ldr  r5, [sp, #0]
+    str  r5, [r4, #PROC_R0]
+    ldr  r5, [sp, #4]
+    str  r5, [r4, #PROC_R1]
+    ldr  r5, [sp, #8]
+    str  r5, [r4, #PROC_R2]
+    ldr  r5, [sp, #12]
+    str  r5, [r4, #PROC_R3]
+    ldr  r5, [sp, #16]
+    str  r5, [r4, #PROC_R4]
+    ldr  r5, [sp, #20]
+    str  r5, [r4, #PROC_R5]
+    ldr  r5, [sp, #24]
+    str  r5, [r4, #PROC_R6]
+    ldr  r5, [sp, #28]
+    str  r5, [r4, #PROC_R7]
+    ldr  r5, [sp, #32]
+    str  r5, [r4, #PROC_R8]
+    ldr  r5, [sp, #36]
+    str  r5, [r4, #PROC_R9]
+    ldr  r5, [sp, #40]
+    str  r5, [r4, #PROC_R10]
+    ldr  r5, [sp, #44]
+    str  r5, [r4, #PROC_R11]
+    ldr  r5, [sp, #48]
+    str  r5, [r4, #PROC_R12]
 
     // --------------------------------------------------------
     // Etapa 4: Guardar SPSR (= CPSR del proceso interrumpido)
@@ -221,8 +220,8 @@ irq_no_current_process:
     // r4 queda sobreescrito con su valor correcto del PCB. ✓
     // --------------------------------------------------------
     add  r4, r4, #PROC_R0
-    ldmia r4, {r0-r3, r5-r12}   @ salta r4
-    ldr  r4, [r4, #16]     
+    ldmia r4, {r0-r12}
+
 
     // --------------------------------------------------------
     // Etapa 12: Saltar al nuevo proceso
@@ -231,10 +230,6 @@ irq_no_current_process:
     //   → CPSR = SPSR_irq (= CPSR guardado del nuevo proceso)
     // --------------------------------------------------------
     movs pc, lr
-
-// ============================================================
-// Otros handlers
-// ============================================================
 
 undefined_handler:
     b hang
@@ -251,10 +246,6 @@ data_handler:
 fiq_handler:
     b hang
 
-// ============================================================
-// Acceso de memoria
-// ============================================================
-
 PUT32:
     str r1, [r0]
     bx lr
@@ -269,9 +260,11 @@ enable_irq:
     msr cpsr_c, r0
     bx lr
 
-// ============================================================
-// Stacks
-// ============================================================
+disable_irq:
+    mrs r0, cpsr
+    orr r0, r0, #0x80
+    msr cpsr_c, r0
+    bx lr
 
 .section .bss
 .align 8

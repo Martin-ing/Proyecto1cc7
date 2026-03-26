@@ -6,7 +6,9 @@ void p2_start(void) {
     char c = 'a';
 
     while (1) {
+        disable_irq();
         PRINT("----From P2: %c\n", c);
+        enable_irq();
         c++;
         if(c == ('z'+1)){
             c = 'a';

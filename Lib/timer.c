@@ -51,6 +51,7 @@ void timer_init(void) {
     PUT32(TLDR, 0xFE91CA00);
     PUT32(TCRR, 0xFE91CA00);
 
+
     // Enable overflow interrupt and auto-reload
     PUT32(TIER, 0x2);
     PUT32(TCLR, 0x3);
@@ -62,15 +63,11 @@ void timer_irq_handler(void) {
     PUT32(PLATFORM_TIMER_BASE + 0x0C, 1);   // limpiar interrupcion SP804
     // acknowledge VIC si tienes el intc configurado
     PUT32(PLATFORM_INTC_BASE + 0x30, 1);
-    os_write("Tick\n");
 #else
     // Clear timer overflow flag
     PUT32(TISR, 0x2);
 
     // Acknowledge interrupt controller
     PUT32(INTC_CONTROL, 0x1);
-
-    // Debug output
-    os_write("Tick\n");
 #endif
 }

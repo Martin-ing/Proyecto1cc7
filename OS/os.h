@@ -3,6 +3,7 @@
 
 // Interrupt control
 void enable_irq(void);
+void disable_irq(void);
 
 // Low-level memory access functions (implemented in root.s)
 void PUT32(unsigned int addr, unsigned int value);
