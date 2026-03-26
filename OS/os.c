@@ -4,7 +4,6 @@
 #include "scheduler.h"
 #include "uart.h"
 #include "timer.h"
-
 #define PROCESS_STACK_SIZE  0x1000
 
 extern void jump_to_process(uint32_t pc, uint32_t sp);

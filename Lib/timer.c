@@ -2,6 +2,7 @@
 #include "plataform.h"
 #include "os.h"
 #include "timer.h"
+#include "os.h"
 
 // ============================================================================
 // BeagleBone Black DMTIMER2
@@ -32,7 +33,8 @@ void timer_init(void) {
     PUT32(PLATFORM_TIMER_BASE + 0x08, 0);         // detener timer
     PUT32(PLATFORM_TIMER_BASE + 0x00, 1000000);   // load value
     PUT32(PLATFORM_TIMER_BASE + 0x0C, 1);         // limpiar interrupcion
-    PUT32(PLATFORM_TIMER_BASE + 0x08, 0xC2);      // enable + periodic + irq
+    PUT32(PLATFORM_INTC_BASE + 0x10, (1 << 4));
+    PUT32(PLATFORM_TIMER_BASE + 0x08, 0xE2);      // enable + periodic + irq
 #else
     // Enable timer2 clock
     PUT32(CM_PER_TIMER2_CLKCTRL, 0x2);
@@ -59,6 +61,7 @@ void timer_irq_handler(void) {
 #if PLATFORM_TARGET == 1
     PUT32(PLATFORM_TIMER_BASE + 0x0C, 1);   // limpiar interrupcion SP804
     // acknowledge VIC si tienes el intc configurado
+    PUT32(PLATFORM_INTC_BASE + 0x30, 1);
     os_write("Tick\n");
 #else
     // Clear timer overflow flag
