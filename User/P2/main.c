@@ -1,4 +1,5 @@
 #include "stdio.h"
+#include "os.h"
 #include "alphanumeric.h"
 
 __attribute__((section(".p2_text")))
@@ -12,6 +13,7 @@ void p2_start(void) {
         c++;
         if(c == ('z'+1)){
             c = 'a';
+            yield();
         }
     }
 }

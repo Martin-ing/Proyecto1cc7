@@ -45,9 +45,6 @@ int main(void) {
     enable_irq();
 
     while (1) {
-        disable_irq();
-        PRINT("----From OS: hola\n");
-        enable_irq();
     }
     return 0;
 }

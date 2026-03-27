@@ -12,6 +12,7 @@ void p1_start(void) {
         i++;
         if(i == 10){
             i=0;
+            yield();
         }
     }
 }
