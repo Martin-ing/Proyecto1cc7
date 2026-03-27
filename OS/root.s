@@ -232,34 +232,15 @@ irq_no_current_process:
     // --------------------------------------------------------
     movs pc, lr
 
-// ============================================================
-// yield — context switch voluntario
-//
-// Llamado desde C como: yield();
-// Al entrar: lr = dirección de retorno en el proceso
-// Flujo: guarda contexto → schedule() → restaura nuevo proceso
-// ============================================================
-
 yield:
-    // --------------------------------------------------------
-    // Etapa 1: Apilar r0-r12 y lr en el stack SVC del proceso
-    // 14 registros × 4 = 56 bytes
-    // Disposición: r0@sp+0 ... r12@sp+48, lr@sp+52
-    // --------------------------------------------------------
     push {r0-r12, lr}
 
-    // --------------------------------------------------------
-    // Etapa 2: Cargar CurrProcess
-    // --------------------------------------------------------
     ldr  r4, =CurrProcess
     ldr  r4, [r4]
 
     cmp  r4, #0
     beq  yield_no_process
 
-    // --------------------------------------------------------
-    // Etapa 3: Guardar r0-r12 en el PCB desde el stack
-    // --------------------------------------------------------
     ldr  r5, [sp, #0]
     str  r5, [r4, #PROC_R0]
     ldr  r5, [sp, #4]
@@ -287,64 +268,32 @@ yield:
     ldr  r5, [sp, #48]
     str  r5, [r4, #PROC_R12]
 
-    // --------------------------------------------------------
-    // Etapa 4: Guardar PC = lr original (retorno al proceso)
-    // y LR también por completitud del PCB
-    // --------------------------------------------------------
-    ldr  r5, [sp, #52]             @ lr apilado = dirección de retorno
+    ldr  r5, [sp, #52]
     str  r5, [r4, #PROC_PC]
     str  r5, [r4, #PROC_LR]
 
-    // --------------------------------------------------------
-    // Etapa 5: Guardar SP original (antes del push de 56 bytes)
-    // --------------------------------------------------------
     add  r5, sp, #56
     str  r5, [r4, #PROC_SP]
 
-    // --------------------------------------------------------
-    // Etapa 6: Guardar CPSR como SPSR del proceso
-    // (estamos en SVC mode → CPSR = modo del proceso)
-    // --------------------------------------------------------
     mrs  r5, cpsr
     str  r5, [r4, #PROC_SPSR]
 
-    // --------------------------------------------------------
-    // Etapa 7: Rotar scheduler
-    // --------------------------------------------------------
 yield_no_process:
     bl   schedule
 
-    // --------------------------------------------------------
-    // Etapa 8: Cargar el NUEVO proceso
-    // --------------------------------------------------------
     ldr  r4, =CurrProcess
     ldr  r4, [r4]
 
-    // --------------------------------------------------------
-    // Etapa 9: Preparar retorno al nuevo proceso
-    // Cargamos PC en lr, CPSR guardado en SPSR_svc
-    // movs pc, lr en SVC mode: PC←lr + CPSR←SPSR_svc
-    // --------------------------------------------------------
     ldr  lr, [r4, #PROC_PC]
 
     ldr  r5, [r4, #PROC_SPSR]
     msr  spsr_cxsf, r5
 
     ldr  sp, [r4, #PROC_SP]
-    // (lr_svc del proceso se restaura vía PROC_LR si se necesita)
 
-    // --------------------------------------------------------
-    // Etapa 10: Restaurar r0-r12 del PCB
-    // --------------------------------------------------------
     add  r4, r4, #PROC_R0
     ldmia r4, {r0-r12}
 
-    // --------------------------------------------------------
-    // Etapa 11: Saltar al nuevo proceso
-    // movs pc, lr en modo privilegiado:
-    //   → CPSR = SPSR_svc (modo del proceso)
-    //   → PC   = lr       (donde quedó el proceso)
-    // --------------------------------------------------------
     movs pc, lr
 
 undefined_handler:

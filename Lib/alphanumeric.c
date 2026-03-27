@@ -23,7 +23,6 @@ void uart_putnum(unsigned int num) {
     uart_putc('\n');
 }
 
-// Convert int to string
 void uart_itoa(int num, char *buffer) {
     int i = 0;
     int is_negative = 0;
@@ -75,7 +74,6 @@ void uart_ftoa(float num, char *buffer) {
     int intpart = (int)num;
     float decpart = num - (float)intpart;
 
-    // Parte decimal convertida a entero "moviendo" el punto
     while (decpart - (float)((int)decpart)) {
         decpart = decpart * 10.0f;
     }
@@ -108,7 +106,6 @@ void uart_ftoa(float num, char *buffer) {
 
     buffer[i] = '\0';
 
-    // reverse
     int start = 0;
     int end = i - 1;
     char temp;
@@ -122,7 +119,6 @@ void uart_ftoa(float num, char *buffer) {
     }
 }
 
-// String to int
 int uart_atoi(const char *s) {
     int num = 0;
     int sign = 1;
@@ -141,7 +137,6 @@ int uart_atoi(const char *s) {
     return sign * num;
 }
 
-// String to float
 float uart_atof(const char *s) {
     float num = 0.0f;
     float dec = 0.0f;

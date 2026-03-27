@@ -13,7 +13,6 @@ void p2_start(void) {
         c++;
         if(c == ('z'+1)){
             c = 'a';
-            yield();
         }
     }
 }
