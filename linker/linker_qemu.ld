@@ -35,6 +35,12 @@ SECTIONS
         __bss_end__ = .;
     } > os_ram
 
+    .irq_stack :
+    {
+        . = ALIGN(8);
+        *(.irq_stack)
+    } > os_ram
+    
     _stack_bottom = __bss_end__;
     _stack_top = ORIGIN(os_ram) + LENGTH(os_ram);
 

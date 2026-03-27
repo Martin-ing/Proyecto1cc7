@@ -13,6 +13,8 @@
 #define TISR                (DMTIMER2_BASE + 0x28)  // Timer Interrupt Status Register
 #define TIER                (DMTIMER2_BASE + 0x2C)  // Timer Interrupt Enable Register
 #define TLDR                (DMTIMER2_BASE + 0x40)  // Timer Load Register
+#define FREQ_BEAGLE         0xFFFFFFFF - (24000000 * 2)
+#define FREQ_QEMU           1 * 1000000
 
 // ============================================================================
 // BeagleBone Black Interrupt Controller (INTCPS)
@@ -31,7 +33,7 @@
 void timer_init(void) {
 #if PLATFORM_TARGET == 1
     PUT32(PLATFORM_TIMER_BASE + 0x08, 0);         // detener timer
-    PUT32(PLATFORM_TIMER_BASE + 0x00, 1000000);   // load value
+    PUT32(PLATFORM_TIMER_BASE + 0x00, FREQ_QEMU);   // load value
     PUT32(PLATFORM_TIMER_BASE + 0x0C, 1);         // limpiar interrupcion
     PUT32(PLATFORM_INTC_BASE + 0x10, (1 << 4));
     PUT32(PLATFORM_TIMER_BASE + 0x08, 0xE2);      // enable + periodic + irq
@@ -48,8 +50,8 @@ void timer_init(void) {
     PUT32(TISR, 0x7);
 
     // Load start value for ~2 seconds at 24 MHz
-    PUT32(TLDR, 0xFE91CA00);
-    PUT32(TCRR, 0xFE91CA00);
+    PUT32(TLDR, FREQ_BEAGLE);
+    PUT32(TCRR, FREQ_BEAGLE);
 
 
     // Enable overflow interrupt and auto-reload

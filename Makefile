@@ -53,11 +53,11 @@ BASE_ASFLAGS = --warn --fatal-warnings
 ifeq ($(TARGET), qemu)
     CFLAGS   = $(BASE_CFLAGS) -O0 -g3 $(PLATFORM_FLAGS)
     ASFLAGS  = $(BASE_ASFLAGS) -g
-    LDFLAGS  = -T linker_qemu.ld
+    LDFLAGS  = -T linker/linker_qemu.ld
 else
     CFLAGS   = $(BASE_CFLAGS) -O2 $(PLATFORM_FLAGS)
     ASFLAGS  = $(BASE_ASFLAGS)
-    LDFLAGS  = -T linker_beagle.ld
+    LDFLAGS  = -T linker/linker_beagle.ld
 endif
 
 all: $(BIN)
@@ -76,10 +76,11 @@ $(ELF): $(ASM_OBJ) $(C_OBJ)
 $(BIN): $(ELF)
 	$(OBJCOPY) $< -O binary $@
 
-beagle: $(BIN)
+beagle: 
+	$(MAKE) TARGET=beagle all
 
-qemu: TARGET = qemu
-qemu: $(BIN)
+qemu: 
+	$(MAKE) TARGET=qemu all
 	@echo ""
 	@echo ">>> Lanzando QEMU con GDB server en puerto 1234..."
 	@echo ">>> En otra terminal corre:"

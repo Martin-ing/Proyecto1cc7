@@ -5,6 +5,8 @@
 #include "scheduler.h"
 #include "uart.h"
 #include "timer.h"
+#include "watchdog.h"
+
 #define PROCESS_STACK_SIZE  0x1000
 
 extern void jump_to_process(uint32_t pc, uint32_t sp);
@@ -30,6 +32,7 @@ void schedule(void)
 }
 
 int main(void) {
+    watchdog_disable();
     sched_queue_init(&ready_queue);
 
     process_init(&p0, 0, PLATFORM_OS_BASE, PLATFORM_OS_STACK + PROCESS_STACK_SIZE);
