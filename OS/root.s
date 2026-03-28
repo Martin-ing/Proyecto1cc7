@@ -145,6 +145,7 @@ irq_handler:
     msr  cpsr_c, r6
 
     // Etapa 7: Limpiar interrupción del timer
+irq_no_current_process:
     bl   timer_irq_handler
 
     // Etapa 8: Scheduler — encola proceso actual, desencola
