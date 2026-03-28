@@ -1,5 +1,6 @@
 # Proyecto 1 — CC7
 
+[Link a la documentación oficial.](https://www.mintlify.com/Martin-ing/Proyecto1cc7)
 Sistema operativo mínimo de bare-metal para procesadores **ARM Cortex-A8**, desarrollado en C y ensamblador ARM. El proyecto puede ejecutarse tanto en hardware real (**BeagleBone**) como en emulación mediante **QEMU**.
 
 ---
