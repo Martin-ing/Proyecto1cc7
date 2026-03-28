@@ -83,27 +83,18 @@ jump_to_process:
 
 irq_handler:
 
-    // --------------------------------------------------------
     // Etapa 1: Salvar registros de trabajo en el stack IRQ
-    // 14 registros × 4 bytes = 56 bytes
-    // Disposición: r0@sp+0, r1@sp+4, ... r12@sp+48, lr@sp+52
-    // --------------------------------------------------------
     sub  sp, sp, #56
     stmia sp, {r0-r12, lr}
 
-    // --------------------------------------------------------
     // Etapa 2: Cargar puntero al proceso actual
-    // --------------------------------------------------------
     ldr  r4, =CurrProcess
     ldr  r4, [r4]
 
     cmp  r4, #0
-    beq  irq_no_current_process     // safety: no debería ocurrir
+    beq  irq_no_current_process
 
-    // --------------------------------------------------------
     // Etapa 3: Guardar r0-r12 en el PCB
-    // (los valores reales están en el stack IRQ, no en los regs)
-    // --------------------------------------------------------
     ldr  r5, [sp, #0]
     str  r5, [r4, #PROC_R0]
     ldr  r5, [sp, #4]
@@ -131,75 +122,43 @@ irq_handler:
     ldr  r5, [sp, #48]
     str  r5, [r4, #PROC_R12]
 
-    // --------------------------------------------------------
     // Etapa 4: Guardar SPSR (= CPSR del proceso interrumpido)
-    // --------------------------------------------------------
     mrs  r5, spsr
     str  r5, [r4, #PROC_SPSR]
 
-    // --------------------------------------------------------
     // Etapa 5: Guardar PC del proceso
-    // En IRQ, lr_irq = PC_interrumpido + 4  →  restamos 4
-    // --------------------------------------------------------
-    ldr  r5, [sp, #52]             @ lr_irq guardado en stack
+    ldr  r5, [sp, #52]
     sub  r5, r5, #4
     str  r5, [r4, #PROC_PC]
 
-    // --------------------------------------------------------
     // Etapa 6: Guardar SP y LR del proceso (registros SVC)
-    // sp_svc y lr_svc son banked → hay que cambiar a SVC mode
-    // para leerlos; r0-r12 son COMPARTIDOS entre modos
-    // --------------------------------------------------------
-    mrs  r6, cpsr                  @ guardar CPSR (modo IRQ actual)
+    mrs  r6, cpsr
 
     bic  r7, r6, #0x1F
-    orr  r7, r7, #0x13             @ modo SVC
-    orr  r7, r7, #0x80             @ IRQ disable (precaución)
+    orr  r7, r7, #0x13
+    orr  r7, r7, #0x80
     msr  cpsr_c, r7
 
-    str  sp, [r4, #PROC_SP]        @ sp_svc del proceso
-    str  lr, [r4, #PROC_LR]        @ lr_svc del proceso
+    str  sp, [r4, #PROC_SP]
+    str  lr, [r4, #PROC_LR]
 
-    msr  cpsr_c, r6                @ volver a modo IRQ
+    msr  cpsr_c, r6
 
-    // --------------------------------------------------------
     // Etapa 7: Limpiar interrupción del timer
-    // r4 es callee-saved → sobrevive el bl sin problema
-    // --------------------------------------------------------
-irq_no_current_process:
     bl   timer_irq_handler
 
-    // --------------------------------------------------------
     // Etapa 8: Scheduler — encola proceso actual, desencola
-    //          el siguiente y actualiza CurrProcess
-    // --------------------------------------------------------
     bl   schedule
 
-    // --------------------------------------------------------
     // Etapa 9: Cargar el NUEVO proceso actual
-    // (schedule() actualizó CurrProcess)
-    // --------------------------------------------------------
     ldr  r4, =CurrProcess
     ldr  r4, [r4]
 
-    // --------------------------------------------------------
     // Etapa 10: Preparar el retorno al nuevo proceso
-    //
-    // El truco del ARM:
-    //   - lr_irq   = dirección a la que saltaremos (PC del proceso)
-    //   - spsr_irq = CPSR que se restaurará al ejecutar movs pc, lr
-    //   - movs pc, lr  hace ambas cosas en un solo ciclo
-    // --------------------------------------------------------
-
-    // Cargar PC del nuevo proceso en lr_irq (banco IRQ)
     ldr  lr, [r4, #PROC_PC]
 
-    // Restaurar SPSR con el CPSR guardado del nuevo proceso
     ldr  r5, [r4, #PROC_SPSR]
     msr  spsr_cxsf, r5
-
-    // Cambiar a SVC para restaurar sp_svc y lr_svc del nuevo proceso
-    // lr_irq queda intacto porque es un registro banked
     mrs  r6, cpsr
     bic  r7, r6, #0x1F
     orr  r7, r7, #0x13
@@ -212,24 +171,12 @@ irq_no_current_process:
     // Volver a IRQ — lr_irq sigue con el PC del nuevo proceso
     msr  cpsr_c, r6
 
-    // --------------------------------------------------------
     // Etapa 11: Restaurar r0-r12 del PCB con ldmia
-    //
-    // r4 apunta al PCB; sumamos PROC_R0 (offset 4) para apuntar
-    // directo al arreglo r[0..12]. ldmia carga 13 registros
-    // consecutivos: r0←r[0], r1←r[1], ..., r4←r[4], ..., r12←r[12]
-    // r4 queda sobreescrito con su valor correcto del PCB. ✓
-    // --------------------------------------------------------
     add  r4, r4, #PROC_R0
     ldmia r4, {r0-r12}
 
 
-    // --------------------------------------------------------
     // Etapa 12: Saltar al nuevo proceso
-    // movs pc, lr  (con S-bit en modo privilegiado):
-    //   → PC = lr_irq  (= nuevo proceso PC)
-    //   → CPSR = SPSR_irq (= CPSR guardado del nuevo proceso)
-    // --------------------------------------------------------
     movs pc, lr
 
 yield:
