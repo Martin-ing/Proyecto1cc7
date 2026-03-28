@@ -21,23 +21,32 @@ Este proyecto implementa un sistema operativo mínimo que corre directamente sob
 
 ```
 Proyecto1cc7/
-├── OS/                     # Núcleo del sistema operativo
-│   ├── root.s              # Punto de entrada en ensamblador ARM
-│   ├── os.c                # Lógica principal del OS
-│   ├── process.c           # Gestión de procesos
-│   ├── .venv.beagle        # Variables de memoria para BeagleBone
-│   └── .venv.qemu          # Variables de memoria para QEMU
-├── Lib/                    # Biblioteca estándar mínima
-│   ├── stdio.c             # Funciones de I/O (UART)
-│   └── string.c            # Funciones de cadenas
-├── User/                   # Programas de usuario
-│   └── P1/
-│       └── main.c          # Proceso de usuario P1
-├── linker/                 # Scripts de enlazado
-│   ├── linker_beagle.ld    # Mapa de memoria para BeagleBone
-│   └── linker_qemu.ld      # Mapa de memoria para QEMU
-├── Makefile                # Sistema de build principal
-├── build_and_run.sh        # Script automatizado de build y ejecución
+├── OS/                            # Núcleo del sistema operativo
+│   ├── root.s                     # Punto de entrada en ensamblador ARM
+│   ├── os.c / os.h                # Lógica principal del kernel
+│   ├── process.c / process.h      # Gestión de procesos
+│   ├── scheduler.c / scheduler.h  # Planificador de procesos
+│   ├── uart.c / uart.h            # Driver de comunicación serie (UART)
+│   ├── watchdog.c / watchdog.h    # Driver de watchdog timer
+│   ├── plataform.h                # Definiciones de plataforma (direcciones base)
+│   ├── .venv.beagle               # Variables de memoria para BeagleBone
+│   └── .venv.qemu                 # Variables de memoria para QEMU
+├── Lib/                           # Biblioteca estándar mínima
+│   ├── alphanumeric.c / .h        # Driver de display alfanumérico
+│   ├── rand.c / .h                # Generador de números pseudoaleatorios
+│   ├── stdio.c / .h               # Funciones de I/O (printf, puts via UART)
+│   ├── string.c / .h              # Funciones de cadenas (strlen, memcpy, etc.)
+│   └── timer.c / .h               # Funciones de temporización
+├── User/                          # Procesos de usuario
+│   ├── P1/
+│   │   └── main.c                 # Proceso de usuario 1
+│   └── P2/
+│       └── main.c                 # Proceso de usuario 2
+├── linker/                        # Scripts de enlazado
+│   ├── linker_beagle.ld           # Mapa de memoria para BeagleBone
+│   └── linker_qemu.ld             # Mapa de memoria para QEMU
+├── Makefile                       # Sistema de build principal
+├── build_and_run.sh               # Script automatizado de build y ejecución
 └── .gitignore
 ```
 
